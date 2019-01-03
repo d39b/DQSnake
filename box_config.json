@@ -1,0 +1,63 @@
+{
+    "nn": {
+        "layers": [
+            {
+                "filter_sizes": [
+                    [
+                        2,
+                        2
+                    ]
+                ],
+                "activation": "relu",
+                "type": "conv",
+                "strides": [
+                    1
+                ],
+                "num_filters": [
+                    32
+                ]
+            },
+            {
+                "type": "sep_dense",
+                "sizes": [
+                    256
+                ],
+                "activation" : "relu"
+            }
+        ],
+        "gamma": 0.99,
+        "learning_rate": 0.0000625,
+        "clip_max": 1.0,
+        "clip_grad_norm" : 10.0,
+        "loss" : "mse",
+        "rms_decay": 0.95,
+        "optimizer" : "adam"
+    },
+    "scale_reward_max" : 1.0,
+    "memory_size": 1048576,
+    "memory_start_size": 150000,
+    "memory_alpha" : 0.6,
+    "memory_beta_start" : 0.4,
+    "memory_beta_end" : 1.0,
+    "memory_beta_num_steps" : 50000000,
+    "width": 5,
+    "height": 5,
+    "image_scale_factor": 1,
+    "num_goals" : 1,
+    "update_freq": 4,
+    "target_network_update_mode" : "soft",
+    "target_network_update_freq": 10000,
+    "target_network_update_tau" : 0.0004,
+    "num_epsilon_steps": 1100000,
+    "epsilon_start": 1.0,
+    "epsilon_min": 0.01,
+    "max_steps": 50000000,
+    "batch_size": 32,
+    "tensorboard_log_path": "tensorboard",
+    "tensorboard_log_freq": 50000,
+    "eval_freq": 100000,
+    "eval_steps": 5000,
+    "output_freq": 1000,
+    "save_freq": 500000,
+    "save_path": "save"
+}
