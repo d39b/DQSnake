@@ -33,6 +33,7 @@
         "rms_decay": 0.95,
         "optimizer" : "adam"
     },
+    "game" : "box",
     "scale_reward_max" : 1.0,
     "memory_size": 1048576,
     "memory_start_size": 150000,

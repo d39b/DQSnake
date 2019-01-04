@@ -4,19 +4,19 @@ from util import MaxHeap
 
 class ExperienceMemory:
 
-    #TODO more complex sampling method to first sample from games and then from frames in that game, that way we can avoid sampling terminal states
-
     def __init__(self,max_size,width,height,num_channels,alpha):
-        #TODO round to next biggest power of 2 here
         self.max_size = max_size
         self.frames = np.zeros([max_size,width,height,num_channels],dtype=np.float32)
         self.actions = np.zeros(max_size,dtype=int)
-        self.rewards = np.zeros([max_size,1],dtype=float)
+        self.rewards = np.zeros([max_size,1],dtype=np.float32)
         self.terminal = np.zeros([max_size,1],dtype=int)
         self.size = 0 
         self.next_index = 0
-        self.sum_tree = SumTree(max_size,alpha)
-        self.max_heap = MaxHeap(max_size)
+        #use the next power of 2 as the size for the sum tree/max heap, this simplifies their implementation
+        power_2_size = self.get_next_power(max_size)
+        self.sum_tree = SumTree(power_2_size,alpha)
+        self.max_heap = MaxHeap(power_2_size)
+        #additive constant to keep td-values above 0
         self.td_epsilon = 1e-9
 
     def add(self,s,a,r,t):
@@ -67,3 +67,13 @@ class ExperienceMemory:
         for i in range(len(indices)):
             self.sum_tree.update(indices[i],td[i]+self.td_epsilon)
             self.max_heap.update(indices[i],td[i]+self.td_epsilon)
+            
+    def get_next_power(self,x):
+        result = 1
+        if x > 0:
+            x_int = int(x-1)
+            while x_int > 0:
+                x_int = x_int >> 1
+                result = result << 1
+            
+        return result

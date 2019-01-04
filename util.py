@@ -1,3 +1,5 @@
+import numpy as np
+
 #simple implementation of a double linked list
 class LinkedList:
     
@@ -213,7 +215,7 @@ class SumTree:
         
 class MaxHeap:
 
-    def __init__(self,num_leafs,alpha):       
+    def __init__(self,num_leafs): 
         self.num_leafs = num_leafs
         #number of internal nodes is num_leafs - 1
         self.size = 2*self.num_leafs - 1

@@ -175,7 +175,7 @@ class Snake:
         return self.state_img
 
         
-class Game:
+class Box:
 
     num_actions = 4
     action_names = ["down","left","up","right"]

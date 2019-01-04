@@ -16,19 +16,19 @@ import sys
 
 class QTrainer:
 
-    def __init__(self,config,load_model=None):
+    def __init__(self,config_or_model,load_model=False):
         self.config = None
         self.model_loaded = False
-        if not load_model is None:
-            print("Loading model from: {}".format(load_model))
-            load_path = Path(load_model)
+        if load_model:
+            print("Loading model from: {}".format(config_or_model))
+            load_path = Path(config_or_model)
             if (not load_path.exists()) or (not load_path.is_dir()):
                 print("Error: directory doesn't exist")
 
             config_filename = load_path.joinpath("config.json")
             self.config = self.load_config(str(config_filename))
         else:
-            self.config = self.load_config(config)
+            self.config = self.load_config(config_or_model)
         
         self.game_name = self.config["game"]
         self.game = None
@@ -65,9 +65,9 @@ class QTrainer:
         self.scale_reward_max = None
         if "scale_reward_max" in self.config:
             self.scale_reward_max = self.config["scale_reward_max"]
-            Game.max_reward *= self.scale_reward_max
-            Game.min_reward *= self.scale_reward_max
-            Game.empty_reward *= self.scale_reward_max 
+            self.game.max_reward *= self.scale_reward_max
+            self.game.min_reward *= self.scale_reward_max
+            self.game.empty_reward *= self.scale_reward_max 
             print("Scaling rewards by {}".format(self.scale_reward_max))
 
         self.max_steps = self.config["max_steps"]
@@ -96,8 +96,8 @@ class QTrainer:
 
         self.exp_memory = ExperienceMemory(self.memory_size,self.img_width,self.img_height,self.num_img_channels,self.memory_alpha)
         self.qlearner = None
-        if not load_model is None:
-            load_path = str(Path(load_model).joinpath("nn").joinpath("model"))
+        if load_model:
+            load_path = str(Path(config_or_model).joinpath("nn").joinpath("model"))
             self.qlearner = QLearner(self.nn_config,self.num_actions,self.img_width,self.img_height,self.num_img_channels,self.memory_size,load_model=load_path,target_network_update_tau=self.target_network_update_tau)
             self.curr_step = self.config["curr_step"]
             self.epsilon = self.config["epsilon"]
@@ -311,11 +311,11 @@ class QTrainer:
         image_id = 0
         game = self.get_game()
         #image1 = np.copy(sb.get_state())
-        self.save_image(game.get_state(),path,image_id,0,0,0)
+        self.save_image(game.get_state(),path,image_id,0,0,0,0.0)
         total_score = 0
         games_finished = 0
         max_game_score = 0
-        current_game_score = 0
+        current_game_score = 0.0
         for i in range(num_steps):
             image_id += 1
             #TODO make this always random or no? probably not if we want to test network, maybe make it as extra cli argument
@@ -325,46 +325,48 @@ class QTrainer:
             reward = self.renormalize_reward(reward)
             #image2 = sb.get_state()          
             #self.save_transition(image1,action,reward,image2,is_terminal,path,image_id)
-            self.save_image(game.get_state(),path,image_id,action,reward,is_terminal)
-            #image1 = np.copy(sb.get_state())
             total_score += reward
             current_game_score += reward
+            self.save_image(game.get_state(),path,image_id,action,reward,is_terminal,current_game_score)
+            #image1 = np.copy(sb.get_state())            
             if is_terminal:
                 game.reset()
                 games_finished += 1
                 if current_game_score > max_game_score:
                     max_game_score = current_game_score
-                current_game_score = 0
+                current_game_score = 0.0
+                self.save_image(game.get_state(),path,image_id,action,reward,is_terminal,current_game_score)
 
         print("Max score: {}".format(max_game_score))
 
-    def find_max_games(self,num_steps,path):
+    def find_max_games(self,num_steps,path,score_threshold):
         image_id = 0
         game = self.get_game()
         frames = []
-        frames.append(np.copy(game.get_state()))
+        frames.append((np.copy(game.get_state()),0.0))
         max_game_score = 0
-        current_game_score = 0
+        current_game_score = 0.0
         for i in range(num_steps):
             if i % (num_steps//100) == 0:
                 print("At step {}".format(i))
             action = self.qlearner.compute_action(game.get_state())[0]  
             reward, is_terminal = game.execute_action(action)
             reward = self.renormalize_reward(reward)
-            frames.append(np.copy(game.get_state()))
             current_game_score += reward
+            frames.append((np.copy(game.get_state()),current_game_score))            
             if is_terminal:
                 game.reset()
                 if current_game_score > max_game_score:
                     max_game_score = current_game_score
 
-                if current_game_score > 70:
+                if current_game_score > score_threshold:
                     for frame in frames:
-                        self.save_image(frame,path,image_id,0,0,0)
+                        self.save_image(frame[0],path,image_id,0,0,0,frame[1])
                         image_id += 1
 
                 frames = []
-                current_game_score = 0
+                frames.append((np.copy(game.get_state()),0.0))
+                current_game_score = 0.0
                 
         print("Max score: {}".format(max_game_score))
 
@@ -407,24 +409,26 @@ class QTrainer:
                 
         return np.concatenate((image2,sep,image1),axis=0)
         
-    def save_image(self,img,path,image_id,action,reward,is_terminal):
+    def save_image(self,img,path,image_id,action,reward,is_terminal,score):
         save_file = Path(path).joinpath("img{}.png".format(image_id))
         with save_file.open('wb') as fp:
             fig = plt.figure()
             plt.imshow(np.squeeze(img),origin="lower")
             plt.axis("off")
-            plt.title("action: {}  reward: {}  terminal: {}".format(self.game.action_names[action],reward,is_terminal))
+            #plt.title("action: {}  reward: {}  terminal: {}".format(self.game.action_names[action],reward,is_terminal))
+            plt.title("Score: {}".format(score))
             fig.savefig(fp,bbox_inches='tight',format="png")
             plt.close()
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep neural network to play games.")
-    parser.add_argument("config_file",type=str,help="path to configuration file")
+    parser.add_argument("config_or_model",type=str,help="path to configuration file or saved model")
     parser.add_argument("--eval",type=int,default=0,help="play for a given number of steps and output images")
     parser.add_argument("--find_max_games",type=int,default=0,help="play for a given number of steps and output images")
+    parser.add_argument("--score_threshold",type=int,default=70,help="only output frames for game with score above this threshold")
     parser.add_argument("--test_exp_mem",type=int,default=0,help="print transition images from experience memory")
     parser.add_argument("--img_path",type=str,default="img",help="path to store images in")
-    parser.add_argument("--load_model",default=None,help="folder to restore training state from")
+    parser.add_argument("--load_model",action="store_true",help="load a saved model")
     parser.add_argument("--save_on_exit",action="store_true",help="store model when exiting the program")
     args = parser.parse_args()
     return args
@@ -442,13 +446,13 @@ def add_exit_handler(qtrainer,save_on_exit):
 
 if __name__ == '__main__':
     args = parse_args()
-    qtrainer = QTrainer(args.config_file,load_model=args.load_model)
+    qtrainer = QTrainer(args.config_or_model,load_model=args.load_model)
     add_exit_handler(qtrainer,args.save_on_exit)
 
     if args.eval > 0:
         qtrainer.eval_with_images(args.eval,args.img_path)
     elif args.find_max_games > 0:
-        qtrainer.find_max_games(args.find_max_games,args.img_path)
+        qtrainer.find_max_games(args.find_max_games,args.img_path,args.score_threshold)
     elif args.test_exp_mem > 0:
         qtrainer.test_experience_memory(args.test_exp_mem,args.img_path)
     else:
