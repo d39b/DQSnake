@@ -2,9 +2,9 @@
 Train an agent to play Snake using the deep reinforcement learning algorithm from [[1]](#paper1).
 
 To improve stability and accelerate learning the following extensions to the original DQN algorithm are used:
-* Double Q-learning (adapted from [[1]](#paper2))
-* Dueling Network Architecture (adapted from [[2]](#paper3))
-* Prioritized Experience Replay (adapted from [[3]](#paper4))
+* Double Q-learning (adapted from [[2]](#paper2))
+* Dueling Network Architecture (adapted from [[3]](#paper3))
+* Prioritized Experience Replay (adapted from [[4]](#paper4))
 
 ## Usage
 To train an agent to play Snake, run:

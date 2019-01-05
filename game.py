@@ -1,6 +1,7 @@
 import numpy as np
 from util import LinkedList
 
+#simple implemntation of the game Snake
 class Snake:
 
     num_actions = 4
@@ -15,8 +16,12 @@ class Snake:
         [0,0,1.0], #rgb value of BODY
         [0,1.0,0]  #rgb value of GOAL
     ]
+    #reward on game over
     min_reward = -0.2
+    #reward for finding a goal
     max_reward = 1.0
+    #this value could be used to set a negative reward for all moves that would usually yield a 0 reward
+    #thereby forcing the agent to minimize the number of such moves
     empty_reward = 0.0
 
     def __init__(self,width,height,image_scale_factor,num_goals):
@@ -72,12 +77,8 @@ class Snake:
         #snake finds a goal
         elif self.state[x_new,y_new] == self.GOAL: 
             self.update_state(x_new,y_new,self.HEAD)
-            if self.length == 1:
-                self.update_state(x_old,y_old,self.BODY)
-                self.body.add_head([x_old,y_old])
-            else:
-                self.body.add_head([x_old,y_old])
-                self.update_state(x_old,y_old,self.BODY)
+            self.update_state(x_old,y_old,self.BODY)
+            self.body.add_head([x_old,y_old])
             reward = self.max_reward
             self.length += 1
             if self.length == self.width * self.height:
@@ -91,26 +92,13 @@ class Snake:
         elif self.state[x_new,y_new] == self.BODY:
             head_pos = self.body.get_head()
             tail_pos = self.body.get_tail()
-            #snake can move the position of the current tail
+            #snake can move to the position of the current tail
             if x_new == tail_pos[0] and y_new == tail_pos[1]:
                 self.update_state(x_new,y_new,self.HEAD)
                 self.body.add_head([x_old,y_old])
                 self.update_state(x_old,y_old,self.BODY)
                 self.body.pop_tail()
                 reward = self.empty_reward
-            elif x_new == head_pos[0] and y_new == head_pos[1]:
-                #switch head and tail of snake
-                #tail_pos = self.body.pop_tail()
-                #self.body.add_head([x_old,y_old])
-                #self.body.reverse()
-                #self.update_state(x_old,y_old,self.BODY)
-                #self.update_state(tail_pos[0],tail_pos[1],self.HEAD)
-                #self.head_x = tail_pos[0]
-                #self.head_y = tail_pos[1]
-                #reward = self.empty_reward
-                self.update_state(x_new,y_new,self.HEAD)
-                is_terminal = True
-                reward = self.min_reward
             else:
                 self.update_state(x_new,y_new,self.HEAD)
                 is_terminal = True
@@ -121,15 +109,15 @@ class Snake:
     def reset(self):
         self.state = np.zeros([self.width,self.height],dtype=np.uint8)
         self.state_img = np.zeros([1,self.image_width,self.image_height,self.num_channels],dtype=np.float32)
-
+        self.length = 1
+        
         self.head_x, self.head_y = self.get_random_pos()
         self.update_state(self.head_x,self.head_y,self.HEAD)
         for i in range(self.num_goals):
             g_x, g_y = self.get_random_pos() 
             self.update_state(g_x,g_y,self.GOAL)
 
-        self.body = LinkedList()
-        self.length = 1
+        self.body = LinkedList()        
 
     def update_state(self,x_pos,y_pos,obj_type):
         self.state[x_pos,y_pos] = obj_type
@@ -145,36 +133,23 @@ class Snake:
             self.state_img[0,x_start:x_end,y_start:y_end,i] = color[i]
 
     def get_random_pos(self):
-        #TODO make this more efficient
-        #could use some kind of tree like datastructure
-        if self.length < (self.width*self.height*3)//4:
-            found = False
-            r_x = 0
-            r_y = 0
-            while not found:
-                r_x = np.random.randint(self.width)
-                r_y = np.random.randint(self.height)
+        found = False
+        r_x = 0
+        r_y = 0
+        while not found:
+            r_x = np.random.randint(self.width)
+            r_y = np.random.randint(self.height)
 
-                if self.state[r_x,r_y] == self.EMPTY:
-                    found = True
+            if self.state[r_x,r_y] == self.EMPTY:
+                found = True
                 
-            return r_x,r_y
-        else:
-            empty_positions = []
-            for i in range(self.width):
-                for j in range(self.height):
-                    if self.state[i,j] == self.EMPTY:
-                        empty_positions.append((i,j))
-
-            result_index = np.random.randint(len(empty_positions))
-            r_x = empty_positions[result_index][0]
-            r_y = empty_positions[result_index][1]
-            return r_x,r_y
-
+        return r_x,r_y
+            
     def get_state(self):
         return self.state_img
 
-        
+
+#a game in which the player has to push a box onto a goal position
 class Box:
 
     num_actions = 4
@@ -226,11 +201,14 @@ class Box:
         self.player_x = x_new
         self.player_y = y_new
         
+        #update the old player position only if the player wasn't on the goal position
         if self.state[x_old,y_old] == self.PLAYER: 
             self.update_state(x_old,y_old,self.EMPTY)
-            
+        
+        #player moves onto an empty position
         if self.state[x_new,y_new] == self.EMPTY:            
             self.update_state(x_new,y_new,self.PLAYER)
+        #player pushes the box
         elif self.state[x_new,y_new] == self.BOX:   
             box_new_x = x_new
             box_new_y = y_new
@@ -242,7 +220,8 @@ class Box:
                 box_new_x = (box_new_x + 1) % self.width
             else:
                 box_new_y = (box_new_y + 1) % self.height
-                
+            
+            #if the box lands on the goal position the game is over
             if self.state[box_new_x,box_new_y] == self.GOAL:
                 reward = self.max_reward
                 is_terminal = True

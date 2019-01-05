@@ -1,7 +1,9 @@
 import tensorflow as tf
 
+#class representing a neural network computing q-values
 class QNetwork:
 
+    #possible activation functions
     activations = {
         "relu" : tf.nn.relu,
         "sigmoid" : tf.sigmoid,
@@ -9,12 +11,17 @@ class QNetwork:
     }
 
     def __init__(self,config,name,graph,num_actions,input_placeholder,trainable=True):
+        #name prefix for tensor operations of this neural network
         self.name = name
         self.graph = graph
+        #number of actions the agent can perform
         self.num_actions = num_actions
+        #if false, variables in this graph are not trained
         self.trainable = trainable
 
         self.input_placeholder = input_placeholder
+        #output tensor of this neural network
+        #contains the q-values and has shape [batch_size,num_actions]
         self.q_values = None
         self.variables = []
         self.next_name_id = 0
@@ -24,6 +31,7 @@ class QNetwork:
 
         self.create_model_from_config(config)
 
+    #creates a neural network based on a json object specifying the architecture
     def create_model_from_config(self,config):
         with self.graph.as_default():
             with tf.name_scope(self.name):
@@ -34,6 +42,8 @@ class QNetwork:
                     layer = config[i]
                     layer_type = layer["type"]
                     
+                    #add convolutional layers
+                    #since we use "VALID" padding, a strides value should divide width-filter_width and height_filter_height
                     if layer_type == "conv":
                         num_filters = layer["num_filters"]
                         filter_sizes = layer["filter_sizes"]
@@ -44,20 +54,23 @@ class QNetwork:
                             real_strides = [1,strides[j],strides[j],1]
                             current_input = self.add_conv_layer(current_input,num_filters[j],filter_sizes[j],strides=real_strides,activation=activation)
     
-                        #TODO does this produce the correct result, i.e. keep batch size fixed
+                        #reshape to [batch_size,x]
                         current_shape = self.get_tensor_shape(current_input)
                         new_size = 1 
                         for j in range(1,len(current_shape)):
                             new_size *= current_shape[j]
                         current_input = tf.reshape(current_input,[-1,new_size])		
-    
+                    
+                    #add a fully connected layer
                     elif layer_type == "dense":
                         sizes = layer["sizes"]
                         activation = layer["activation"]
     
                         for j in range(len(sizes)):
                             current_input = self.add_dense_layer(current_input,sizes[j],activation=activation)
-
+                            
+                    #add to streams of fully connected layers
+                    #used for Dueling Network Architecture
                     elif layer_type == "sep_dense":
                         current_input_a = current_input
                         current_input_v = current_input
@@ -70,28 +83,17 @@ class QNetwork:
                 if (current_input_a is None) or (current_input_v is None):
                     current_input_a = current_input
                     current_input_v = current_input
-
-                #result here should be a vector
+                
                 output_a = self.add_dense_layer(current_input_a,self.num_actions)
                 output_v = self.add_dense_layer(current_input_v,1)
-    
+                
+                #combine the two streams of the dueling architecture into a single q-value  
                 mean_a = tf.reduce_mean(output_a,axis=1,keepdims=True,name="mean_a")
                 action_advantage = tf.subtract(output_a,mean_a)
                 self.q_values = tf.add(action_advantage,output_v)
     
-
+   
     def get_initial_value(self, name, shape):
-        """
-        Returns an initialization operation.
-
-        Parameters
-        ----------
-        name : str
-            string denoting the initialization method to be used
-        shape: List
-            list of integers defining the shape of the initial value
-        """
-
         with self.graph.as_default():
                 if name == "zeros":
                     return tf.zeros(shape)
@@ -108,29 +110,8 @@ class QNetwork:
                 else:
                     print("Error: unknown initializer")
 
-
+    #adds a fully connected layer to the given input and applies an activation function (if provided)
     def add_dense_layer(self,inputs,size,use_bias=True,activation=None,weight_initializer=None,bias_initializer=None):
-        """
-        Adds a dense (or fully connected) layer to a neural network model.
-
-        Reshapes the input to 2 dimensions. If no weight or bias initializer is passed, the initializers defined by self.DEFAULT_WEIGHT_INITIALIZER or self.DEFAULT_BIAS_INITIALIZER are used.
-
-        Parameters
-        ----------
-        inputs : tensorflow.Tensor
-            input of the dense layer to be added
-        size : int
-            number of units in the dense layer
-        use_bias : bool, optional
-            if true, the units use a bias term (default is True)
-        activation : str, optional
-            string denoting a activation function (default is None)
-        weight_initializer : str, optional
-            string denoting a weight initialization function (default is None)
-        bias_initializer : str, optional
-            string denoting a bias initialization function (default is None)
-        """
-
         with self.graph.as_default():
                 if weight_initializer is None:
                     weight_initializer = self.DEFAULT_WEIGHT_INITIALIZER
@@ -161,35 +142,9 @@ class QNetwork:
                 output = tf.nn.bias_add(tf.matmul(inputs,weights,name=self.get_name("dense_matmul")),bias,name=self.get_name("dense_bias_add"))
                 return self.add_activation(output,activation)
 
+    #adds a convolutional layer to the given input
+    #since we use "VALID" padding, the strides values should divide width-filter_width and height_filter_height respectively, otherwise some elements of the input will not be used
     def add_conv_layer(self,inputs,num_filters,filter_size,strides=[1,1,1,1],activation=None,weight_initializer=None,bias_initializer=None):
-        """
-        Adds a convolutional layer to a neural network model.
-
-        Special version of convolution for 3 dimensional inputs in NLP tasks.
-        The input is seen as a batch of sentences, where each sentences is a sequence of word vectors.
-        For each filter size k, windows of k consecutive word vectors are convolved.
-        If no weight or bias initializer is passed, the initializers defined by self.DEFAULT_WEIGHT_INITIALIZER or self.DEFAULT_BIAS_INITIALIZER are used.
-
-        Parameters
-        ----------
-        inputs : tensorflow.Tensor
-            input of the convolutional layer to be added
-        num_filters : int
-            number of filters to use
-        filter_sizes : List
-            list of integers indicating the sizes of sliding windows
-        strides : List
-            list of integers indicating the strides for each window dimension
-        activation : str, optional
-            string denoting a activation function (default is None)
-        use_max_pool : bool, optional
-            if true, max pooling is applied after convolution (default is True)
-        kernel_initializer : str, optional
-            string denoting a weight initialization function (default is None)
-        bias_initializer : str, optional
-            string denoting a bias initialization function (default is None)
-        """
-
         with self.graph.as_default():
                 if weight_initializer is None:
                     weight_initializer = self.DEFAULT_WEIGHT_INITIALIZER
@@ -211,19 +166,9 @@ class QNetwork:
                 activ = self.add_activation(tf.nn.bias_add(conv,bias,name=self.get_name("bias_add")),activation)
 
                 return activ
-
+    
+    #applies the given activation function to the input tensor
     def add_activation(self,inputs,activation):
-        """
-        Applies the given activation function to the input tensor.
-
-        Parameters
-        ----------
-        inputs: tensorflow.Tensor
-            tensor to apply activation function to
-        activation: str or None
-            string denoting the name of the activation function
-        """
-
         with self.graph.as_default():
                 if activation is None:
                     return inputs
@@ -234,51 +179,15 @@ class QNetwork:
                     return QNetwork.activations[activation](inputs)
         
     def add_variable(self, variable):
-        """
-        Adds a variable to this object's set of variables (self.variables).
-
-        Parameters
-        ----------
-        variable : tensorflow.Tensor
-            variable tensor
-        """
-
         self.variables.append(variable)
 
     def add_variables(self,variables):
-        """
-        Adds a list of variables to this object's set of variables (self.variables).
-
-        Parameters
-        ----------
-        variables : List of tensorflow.Tensor
-            list of svariable tensors
-        """
-
         self.variables.extend(variables)
 
     def get_tensor_shape(self,tensor):
-        """
-        Returns the shape of a tensor as a list.
-
-        Parameters
-        ----------
-        tensor : tensorflow.Tensor
-            tensor to return shape of
-        """
-
         return tensor.get_shape().as_list()
 
     def get_name(self,base):
-        """
-        Returns a str obtained by concatenating the input base str with a unique integer index.
-
-        Parameters
-        ----------
-        base : str
-            base string name
-        """
-
         name = base + "_" + str(self.next_name_id)
         self.next_name_id += 1
         return name
