@@ -55,7 +55,7 @@ class QTrainer:
         self.num_goals = self.config["num_goals"]
         self.img_width = self.width*self.image_scale_factor
         self.img_height = self.height*self.image_scale_factor
-        self.num_img_channels = 3
+        self.num_img_channels = self.game.num_channels
         self.num_actions = self.game.num_actions
 
         #random policy parameters
@@ -345,7 +345,7 @@ class QTrainer:
         max_game_score = 0
         current_game_score = 0.0
         for i in range(num_steps):
-            if i % (num_steps//100) == 0:
+            if i % (num_steps//10) == 0:
                 print("At step {}".format(i))
             action = self.qlearner.compute_action(game.get_state())[0]  
             reward, is_terminal = game.execute_action(action)
@@ -358,6 +358,7 @@ class QTrainer:
                     max_game_score = current_game_score
 
                 if current_game_score > score_threshold:
+                    print("Saving images...")
                     for frame in frames:
                         self.save_image(frame[0],path,image_id,0,0,0,score=frame[1])
                         image_id += 1
@@ -425,9 +426,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train a deep neural network to play games.")
     parser.add_argument("config_or_model",type=str,help="path to configuration file or saved model")
     parser.add_argument("--eval",type=int,default=0,help="play for a given number of steps and output images")
-    parser.add_argument("--find_max_games",type=int,default=0,help="play for a given number of steps and output images")
-    parser.add_argument("--score_threshold",type=int,default=70,help="only output frames for game with score above this threshold")
-    parser.add_argument("--test_exp_mem",type=int,default=0,help="print transition images from experience memory")
+    parser.add_argument("--find_max_games",type=int,default=0,help="play for a given number of steps and output images for games whose total score is above a specified threshold")
+    parser.add_argument("--score_threshold",type=int,default=70,help="score threshold for image output")
+    parser.add_argument("--test_exp_mem",type=int,default=0,help="output images for transitions from experience memory")
     parser.add_argument("--img_path",type=str,default="img",help="path to store images in")
     parser.add_argument("--load_model",action="store_true",help="load a saved model")
     parser.add_argument("--save_on_exit",action="store_true",help="store model when exiting the program")

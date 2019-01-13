@@ -1,0 +1,74 @@
+{
+    "game" : "snake",
+    "update_freq": 4,
+    "num_goals": 4,
+    "image_scale_factor": 1,
+    "best_average_score": 62.282352941176455,
+    "width": 9,
+    "memory_beta_start": 0.4,
+    "curr_step": 11100000,
+    "target_network_update_tau": 0.0004,
+    "nn": {
+        "rms_decay": 0.95,
+        "clip_grad_norm": 10.0,
+        "optimizer": "adam",
+        "clip_max": 1.0,
+        "learning_rate": 6.25e-05,
+        "layers": [
+            {
+                "strides": [
+                    2,
+                    1
+                ],
+                "filter_sizes": [
+                    [
+                        3,
+                        3
+                    ],
+                    [
+                        2,
+                        2
+                    ]
+                ],
+                "type": "conv",
+                "activation": "relu",
+                "num_filters": [
+                    32,
+                    64
+                ]
+            },
+            {
+                "sizes": [
+                    512
+                ],
+                "activation": "relu",
+                "type": "sep_dense"
+            }
+        ],
+        "gamma": 0.99,
+        "loss": "mse"
+    },
+    "max_steps": 50000000,
+    "tensorboard_log_path": "tensorboard",
+    "memory_alpha": 0.6,
+    "eval_freq": 100000,
+    "tensorboard_log_freq": 50000,
+    "epsilon_start": 1.0,
+    "memory_start_size": 150000,
+    "memory_beta": 0.5332000359298894,
+    "output_freq": 1000,
+    "epsilon": 0.01,
+    "memory_beta_end": 1.0,
+    "height": 9,
+    "target_network_update_mode": "soft",
+    "target_network_update_freq": 10000,
+    "num_epsilon_steps": 1100000,
+    "memory_beta_num_steps": 50000000,
+    "scale_reward_max": 0.1,
+    "memory_size": 1048576,
+    "epsilon_min": 0.01,
+    "save_path": "save",
+    "eval_steps": 5000,
+    "batch_size": 32,
+    "save_freq": 500000
+}

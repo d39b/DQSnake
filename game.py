@@ -16,6 +16,7 @@ class Snake:
         [0,0,1.0], #rgb value of BODY
         [0,1.0,0]  #rgb value of GOAL
     ]
+    num_channels = 3
     #reward on game over
     min_reward = -0.2
     #reward for finding a goal
@@ -31,7 +32,6 @@ class Snake:
         self.image_width = self.width * image_scale_factor
         self.image_height = self.height * image_scale_factor
         self.num_goals = num_goals
-        self.num_channels = 3
         self.length = 0
 
         #init game
@@ -164,6 +164,7 @@ class Box:
         [0,0,1.0], #rgb value of BOX
         [0,1.0,0]  #rgb value of GOAL         
     ]
+    num_channels = 3
     min_reward = -0.2
     max_reward = 1.0
     empty_reward = 0.0
@@ -175,7 +176,6 @@ class Box:
         self.image_width = self.width * image_scale_factor
         self.image_height = self.height * image_scale_factor
         self.num_boxes = num_boxes
-        self.num_channels = 3
 
         #init game
         self.reset()

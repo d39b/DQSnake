@@ -1,0 +1,6 @@
+model_checkpoint_path: "model"
+all_model_checkpoint_paths: "..\\..\\2018-12-30--15-30--step1200000\\nn\\model"
+all_model_checkpoint_paths: "..\\..\\2018-12-30--15-36--step1400000\\nn\\model"
+all_model_checkpoint_paths: "..\\..\\2018-12-30--15-42--step1600000\\nn\\model"
+all_model_checkpoint_paths: "..\\..\\2018-12-30--15-45--step1700000\\nn\\model"
+all_model_checkpoint_paths: "model"

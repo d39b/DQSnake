@@ -6,6 +6,8 @@ To improve stability and accelerate learning the following extensions to the ori
 * Dueling Network Architecture (adapted from [[3]](#paper3))
 * Prioritized Experience Replay (adapted from [[4]](#paper4))
 
+For simplicity, the neural network receives as input just a single RGB or grayscale image. It is straightforward to augment the code to support histories of multiple frames as neural network input.
+
 ## Usage
 To train an agent to play Snake, run:
 
@@ -15,9 +17,9 @@ The training script takes as input a configuration file that specifies the neura
 
 The performance of the agent is evaluated regularly and if the average reward per game has improved, the current neural network model is saved. To load a saved neural network and resume training, run:
 
-> python3 train.py saved_model --load_model
+> python3 train.py saved_model_dir --load_model
 
-`saved_model` must be a folder containing a saved neural network model
+where `saved_model_dir` is a directory containing a saved neural network model
 
 Tensorboard can be used monitor to monitor the loss, gradients, q-values and average reward per game.
 
@@ -35,13 +37,15 @@ To output a fixed number of game frames using a saved neural network model, run:
 
 ## Results
 
-The following animation shows an agent playing Snake on a 9x9 board. The head of the snake is colored in red, the body as blue and goals as green. The agent has been trained for 11 million steps (about 7 hours on a NVIDIA GTX 1060).
+The following animation shows an agent playing Snake on a 9x9 board. The head of the snake is colored in red, the body in blue and goals as green. The agent has been trained for 11 million steps (about 7 hours on a NVIDIA GTX 1060).
 
 ![](snake.gif)
 
 An agent playing Box. The agent is colored in red, the box in blue and the goal in green. The agent has been trained for 2 million steps.
 
 ![](box.gif)
+
+The neural network models used to generate these animations are available in the folder [trained_models](trained_models).
 
 ## References
 <a name="paper1">[1]</a>: Mnih,  V.,  Kavukcuoglu,  K.,  Silver,  D.,  Rusu,  A. A.,  Veness, J., Bellemare, M. G., Graves, A., Riedmiller, M.,
