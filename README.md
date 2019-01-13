@@ -21,7 +21,7 @@ The performance of the agent is evaluated regularly and if the average reward pe
 
 where `saved_model_dir` is a directory containing a saved neural network model
 
-Tensorboard can be used monitor to monitor the loss, gradients, q-values and average reward per game.
+Tensorboard can be used to monitor the loss, gradients, q-values and average reward per game.
 
 > tensorboard --logdir tensorboard
 
